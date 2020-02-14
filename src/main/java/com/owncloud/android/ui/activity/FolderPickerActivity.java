@@ -43,6 +43,7 @@ import com.nextcloud.client.di.Injectable;
 import com.nextcloud.client.preferences.AppPreferences;
 import com.google.android.material.button.MaterialButton;
 import com.owncloud.android.R;
+import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.lib.common.operations.RemoteOperation;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
@@ -60,10 +61,9 @@ import com.owncloud.android.utils.DisplayUtils;
 import com.owncloud.android.utils.ErrorMessageAdapter;
 import com.owncloud.android.utils.ThemeUtils;
 
+import java.io.File;
 import java.util.ArrayList;
-
 import javax.inject.Inject;
-
 import androidx.appcompat.app.ActionBar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -333,16 +333,22 @@ public class FolderPickerActivity extends FileActivity implements FileFragment.C
     }
 
     protected OCFile getCurrentFolder() {
-        OCFile file = getFile();
-        if (file != null) {
-            if (file.isFolder()) {
-                return file;
-            } else if (getStorageManager() != null) {
-                String parentPath = file.getRemotePath().substring(0, file.getRemotePath().lastIndexOf(file.getFileName()));
-                return getStorageManager().getFileByPath(parentPath);
+        OCFile currentFile = getFile();
+        OCFile finalFolder = null;
+        FileDataStorageManager storageManager = getStorageManager();
+
+        // If the file is null, take the root folder to avoid any error in functions depending on this one
+        if (currentFile != null) {
+            if (currentFile.isFolder()) {
+                finalFolder = currentFile;
+            } else if (currentFile.getRemotePath() != null) {
+                long parentId = currentFile.getParentId();
+                finalFolder = storageManager.getFileById(parentId);
             }
+        } else {
+            finalFolder = storageManager.getFileByPath(OCFile.ROOT_PATH);
         }
-        return null;
+        return finalFolder;
     }
 
     public void refreshListOfFilesFragment(boolean fromSearch) {
